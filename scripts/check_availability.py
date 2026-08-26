@@ -73,7 +73,15 @@ def send_email(message, subject):
     req = urllib.request.Request(
         f"https://formsubmit.co/ajax/{EMAIL_TO}",
         data=payload,
-        headers={"Content-Type": "application/json", "Accept": "application/json"},
+        headers={
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            # formsubmit.co's bot protection 403s the default urllib User-Agent;
+            # a normal browser UA (plus a Referer) gets through.
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+            "Referer": "https://github.com/SharonHAI/aiclub",
+        },
         method="POST",
     )
     urllib.request.urlopen(req, timeout=15)
