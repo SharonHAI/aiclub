@@ -26,9 +26,9 @@ https://embed.exoclass.com/en/embed/provider/736809ef-680e-4d35-b447-3b3ba478948
 - State is kept in `state/status.json` and committed back by the workflow, so you only
   get a notification on the **transition** into "open" (plus a repeat every run while
   it stays open, in case you miss the first one) — not one every 15 minutes while full.
-- Notifications go out via [ntfy.sh](https://ntfy.sh) to the topic configured in the
-  workflow file. Install the ntfy app (iOS/Android) or use the web app at
-  `https://ntfy.sh/<topic>` and subscribe to that exact topic to receive the push.
+- Notifications go out by email via [formsubmit.co](https://formsubmit.co), to the
+  address in `EMAIL_TO` in the workflow file. No account or secret needed — see setup
+  step 2 below for the one-time confirmation email.
 
 ## What this bot will not do
 
@@ -52,11 +52,17 @@ avoids. When the bot detects an open spot, it notifies you — you take it from 
    - If the real "full" wording or button markup differs, adjust the
      `FULL_TEXT_PATTERNS` / `REGISTER_BUTTON_PATTERN` env vars at the top of the
      workflow file (no code changes needed).
-2. Subscribe to the ntfy topic named in the workflow file's `NTFY_TOPIC` env var
-   (in the ntfy app: **+** → **Subscribe to topic** → paste the topic name).
-   Because ntfy topics are unauthenticated, anyone who guesses the topic name could
-   also see these notifications — it's a random string for that reason, but treat it
-   as obscure, not secret. Rename it (edit `NTFY_TOPIC` in the workflow) any time.
+2. **Confirm the email the first time.** formsubmit.co requires a one-time opt-in per
+   destination address: the first POST to it triggers a confirmation email to
+   `EMAIL_TO` ("Confirm your email on FormSubmit") — you must click the link in it
+   once, or no further notifications will be delivered. Trigger that first email by
+   running the workflow manually once (Actions tab → **registration watcher** → **Run
+   workflow**) — it'll fire the confirmation email at the same point it would fire a
+   real "spot open" notification, as long as `is_open` evaluates true, otherwise the
+   confirmation won't be sent until the class actually shows as open. If you'd rather
+   trigger the confirmation immediately regardless of current state, run
+   `curl -X POST https://formsubmit.co/ajax/sharon@koalaty.studio -H "Content-Type: application/json" -d '{"_subject":"test","message":"test"}'`
+   once from any machine.
 3. The workflow needs `contents: write` (already set) to commit `state/status.json`
    updates back to the repo — no extra permissions setup needed.
 

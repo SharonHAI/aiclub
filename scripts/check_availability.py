@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Checks the class registration page for an open spot and pushes an ntfy
+"""Checks the class registration page for an open spot and emails a
 notification on the transition into "open". Never touches the registration
 form itself — detection and notification only."""
 
@@ -20,7 +20,7 @@ FULL_TEXT_PATTERNS = [
 ]
 REGISTER_BUTTON_PATTERN = os.environ.get("REGISTER_BUTTON_PATTERN", r"regist|sign up|inscri")
 STATE_PATH = Path(os.environ.get("STATE_PATH", "state/status.json"))
-NTFY_TOPIC = os.environ["NTFY_TOPIC"]
+EMAIL_TO = os.environ["EMAIL_TO"]
 DEBUG = os.environ.get("DEBUG", "false").lower() == "true"
 DEBUG_DIR = Path(os.environ.get("DEBUG_DIR", "debug-output"))
 
@@ -66,11 +66,12 @@ def register_button_enabled(button_info):
     return any(not b["disabled"] for b in matches)
 
 
-def send_ntfy(message, title):
+def send_email(message, subject):
+    payload = json.dumps({"_subject": subject, "message": message}).encode("utf-8")
     req = urllib.request.Request(
-        f"https://ntfy.sh/{NTFY_TOPIC}",
-        data=message.encode("utf-8"),
-        headers={"Title": title, "Priority": "urgent", "Tags": "rotating_light"},
+        f"https://formsubmit.co/ajax/{EMAIL_TO}",
+        data=payload,
+        headers={"Content-Type": "application/json", "Accept": "application/json"},
         method="POST",
     )
     urllib.request.urlopen(req, timeout=15)
@@ -105,8 +106,8 @@ def main():
     STATE_PATH.write_text(json.dumps({"open": is_open, "checked_at": now}, indent=2) + "\n")
 
     if is_open:
-        title = "Class spot just opened!" if not previous.get("open") else "Still open — go register"
-        send_ntfy(f"A spot is open for the class. Register now:\n{TARGET_URL}", title)
+        subject = "Class spot just opened!" if not previous.get("open") else "Still open — go register"
+        send_email(f"A spot is open for the class. Register now:\n{TARGET_URL}", subject)
         print("Notification sent.")
     else:
         print("Still full — no notification.")
