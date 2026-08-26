@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Checks the class registration page for an open spot and emails a
-notification on the transition into "open". Never touches the registration
-form itself — detection and notification only."""
+"""Checks the class registration page for an open spot and notifies by email
+and push (ntfy) on the transition into "open". Never touches the
+registration form itself — detection and notification only."""
 
 import datetime
 import json
@@ -21,6 +21,7 @@ FULL_TEXT_PATTERNS = [
 REGISTER_BUTTON_PATTERN = os.environ.get("REGISTER_BUTTON_PATTERN", r"regist|sign up|inscri")
 STATE_PATH = Path(os.environ.get("STATE_PATH", "state/status.json"))
 EMAIL_TO = os.environ["EMAIL_TO"]
+NTFY_TOPIC = os.environ["NTFY_TOPIC"]
 DEBUG = os.environ.get("DEBUG", "false").lower() == "true"
 DEBUG_DIR = Path(os.environ.get("DEBUG_DIR", "debug-output"))
 
@@ -77,6 +78,16 @@ def send_email(message, subject):
     urllib.request.urlopen(req, timeout=15)
 
 
+def send_ntfy(message, title):
+    req = urllib.request.Request(
+        f"https://ntfy.sh/{NTFY_TOPIC}",
+        data=message.encode("utf-8"),
+        headers={"Title": title, "Priority": "urgent", "Tags": "rotating_light"},
+        method="POST",
+    )
+    urllib.request.urlopen(req, timeout=15)
+
+
 def load_previous_state():
     if STATE_PATH.exists():
         try:
@@ -107,8 +118,14 @@ def main():
 
     if is_open:
         subject = "Class spot just opened!" if not previous.get("open") else "Still open — go register"
-        send_email(f"A spot is open for the class. Register now:\n{TARGET_URL}", subject)
-        print("Notification sent.")
+        body = f"A spot is open for the class. Register now:\n{TARGET_URL}"
+
+        for channel, send in (("email", lambda: send_email(body, subject)), ("ntfy", lambda: send_ntfy(body, subject))):
+            try:
+                send()
+                print(f"Notification sent via {channel}.")
+            except Exception as exc:
+                print(f"WARNING: {channel} notification failed: {exc}")
     else:
         print("Still full — no notification.")
 

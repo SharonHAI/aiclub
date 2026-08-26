@@ -18,6 +18,9 @@ env:
   # Delivered via formsubmit.co — no account/secret needed. First email sent to
   # a new address requires a one-time confirmation click (see README).
   EMAIL_TO: "sharon@koalaty.studio"
+  # Unauthenticated ntfy.sh topic — obscure, not secret. Subscribe to this exact
+  # name in the ntfy app to receive pushes. Change it any time by editing this line.
+  NTFY_TOPIC: "aiclub-reg-5c547590ddb2"
   # Comma-separated, case-insensitive substrings that mean "class is full".
   FULL_TEXT_PATTERNS: "full group,complet,sold out,no places"
   # Regex matched against button labels to find the register/sign-up button.
