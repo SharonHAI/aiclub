@@ -60,14 +60,13 @@ avoids. When the bot detects an open spot, it notifies you — you take it from 
 2. **Confirm the email the first time.** formsubmit.co requires a one-time opt-in per
    destination address: the first POST to it triggers a confirmation email to
    `EMAIL_TO` ("Confirm your email on FormSubmit") — you must click the link in it
-   once, or no further notifications will be delivered. Trigger that first email by
-   running the workflow manually once (Actions tab → **registration watcher** → **Run
-   workflow**) — it'll fire the confirmation email at the same point it would fire a
-   real "spot open" notification, as long as `is_open` evaluates true, otherwise the
-   confirmation won't be sent until the class actually shows as open. If you'd rather
-   trigger the confirmation immediately regardless of current state, run
-   `curl -X POST https://formsubmit.co/ajax/sharon@koalaty.studio -H "Content-Type: application/json" -d '{"_subject":"test","message":"test"}'`
-   once from any machine.
+   once, or no further notifications will be delivered. To trigger that first POST
+   without waiting for a real open spot, run the workflow manually with `test_notify`
+   ticked (Actions tab → **registration watcher** → **Run workflow** → tick
+   `test_notify` → Run) — this skips the page check entirely and fires both
+   notification channels immediately, so it also doubles as a sanity check that both
+   are wired up correctly. Claude can trigger this run for you via the GitHub API on
+   request, without needing you to open GitHub yourself.
 3. **Subscribe to the ntfy topic** named in the workflow file's `NTFY_TOPIC` env var
    (in the ntfy app: **+** → **Subscribe to topic** → paste the topic name, currently
    `aiclub-reg-5c547590ddb2`). Because ntfy topics are unauthenticated, anyone who

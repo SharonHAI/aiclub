@@ -9,6 +9,10 @@ on:
         description: "Dump rendered page text/screenshot as an artifact instead of relying on cached selectors"
         type: boolean
         default: false
+      test_notify:
+        description: "Skip the page check and send a test notification on both channels immediately"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -44,6 +48,7 @@ jobs:
       - name: Check availability
         env:
           DEBUG: ${{ github.event.inputs.debug }}
+          TEST_NOTIFY: ${{ github.event.inputs.test_notify }}
         run: python scripts/check_availability.py
 
       - name: Upload debug artifact

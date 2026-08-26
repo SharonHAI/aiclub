@@ -24,6 +24,7 @@ EMAIL_TO = os.environ["EMAIL_TO"]
 NTFY_TOPIC = os.environ["NTFY_TOPIC"]
 DEBUG = os.environ.get("DEBUG", "false").lower() == "true"
 DEBUG_DIR = Path(os.environ.get("DEBUG_DIR", "debug-output"))
+TEST_NOTIFY = os.environ.get("TEST_NOTIFY", "false").lower() == "true"
 
 
 def fetch_page():
@@ -88,6 +89,15 @@ def send_ntfy(message, title):
     urllib.request.urlopen(req, timeout=15)
 
 
+def notify(subject, body):
+    for channel, send in (("email", lambda: send_email(body, subject)), ("ntfy", lambda: send_ntfy(body, subject))):
+        try:
+            send()
+            print(f"Notification sent via {channel}.")
+        except Exception as exc:
+            print(f"WARNING: {channel} notification failed: {exc}")
+
+
 def load_previous_state():
     if STATE_PATH.exists():
         try:
@@ -98,6 +108,15 @@ def load_previous_state():
 
 
 def main():
+    if TEST_NOTIFY:
+        notify(
+            "aiclub watcher: test notification",
+            "This is a test notification from the class registration watcher — "
+            "it doesn't mean a spot is actually open. If you got this, both "
+            "channels are wired up correctly.",
+        )
+        return
+
     text, button_info = fetch_page()
     full_by_text = is_full_by_text(text)
     enabled = register_button_enabled(button_info)
@@ -118,14 +137,7 @@ def main():
 
     if is_open:
         subject = "Class spot just opened!" if not previous.get("open") else "Still open — go register"
-        body = f"A spot is open for the class. Register now:\n{TARGET_URL}"
-
-        for channel, send in (("email", lambda: send_email(body, subject)), ("ntfy", lambda: send_ntfy(body, subject))):
-            try:
-                send()
-                print(f"Notification sent via {channel}.")
-            except Exception as exc:
-                print(f"WARNING: {channel} notification failed: {exc}")
+        notify(subject, f"A spot is open for the class. Register now:\n{TARGET_URL}")
     else:
         print("Still full — no notification.")
 
