@@ -1,0 +1,64 @@
+name: registration watcher
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      debug:
+        description: "Dump rendered page text/screenshot as an artifact instead of relying on cached selectors"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+env:
+  TARGET_URL: "https://embed.exoclass.com/en/embed/provider/736809ef-680e-4d35-b447-3b3ba478948a/group-management/049608f6-26c4-40ba-9f2b-c266b1260b53"
+  # Unauthenticated ntfy.sh topic — obscure, not secret. Subscribe to this exact
+  # name in the ntfy app to receive pushes. Change it any time by editing this line.
+  NTFY_TOPIC: "aiclub-reg-5c547590ddb2"
+  # Comma-separated, case-insensitive substrings that mean "class is full".
+  FULL_TEXT_PATTERNS: "full group,complet,sold out,no places"
+  # Regex matched against button labels to find the register/sign-up button.
+  REGISTER_BUTTON_PATTERN: "regist|sign up|inscri"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install -r scripts/requirements.txt
+          playwright install --with-deps chromium
+
+      - name: Check availability
+        env:
+          DEBUG: ${{ github.event.inputs.debug }}
+        run: python scripts/check_availability.py
+
+      - name: Upload debug artifact
+        if: ${{ github.event.inputs.debug == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-page
+          path: debug-output/
+          retention-days: 7
+
+      - name: Commit updated state
+        run: |
+          if ! git diff --quiet -- state/status.json; then
+            git config user.name "registration-watcher-bot"
+            git config user.email "actions@users.noreply.github.com"
+            git add state/status.json
+            git commit -m "Update registration status"
+            git push
+          else
+            echo "No state change, nothing to commit."
+          fi
